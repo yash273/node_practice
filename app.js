@@ -11,6 +11,8 @@ const allowCrossDomain = (req, res, next) => {
     next();
 }
 const app = express();
+// Set EJS as templating engine 
+app.set('view engine', 'ejs');
 app.use(express.json());
 app.use(allowCrossDomain)
 app.use('/user', userRoutes);

@@ -2,10 +2,10 @@ const fs = require('fs');
 const userModel = require("../models/userModel");
 const bcrypt = require("bcrypt");
 const nodemailer = require("nodemailer");
+const ejs = require('ejs');
 const jwt = require("jsonwebtoken");
-const emailTemplate = fs.readFileSync('D:/Training/node learning/node_practice/utils/email-template.html', 'utf8');
 
-function sendEmailForVerification(verificationLink, newUser) {
+function sendEmailForVerification(verificationLink, newUser, res) {
 
   const transporter = nodemailer.createTransport({
     host: 'smtp.ethereal.email',
@@ -15,18 +15,22 @@ function sendEmailForVerification(verificationLink, newUser) {
         pass: process.env.ETH_PASS
     }
   });
+const name = verificationLink
+  ejs.renderFile('D:/Training/node learning/node_practice/views/email-varification.ejs', {verificationLink} , (err, data) => {
+    if(err){
+      console.log(err);
+    } else{
+      const emailx = newUser.email;
 
-  const emailx = newUser.email;
+      const mailOptions = {
+        from: process.env.ETH_USER,
+        to: emailx,
+        subject: "Email Verification",
+        text: `Please click on the following link to verify your email: ${verificationLink}`,
+        html: data
+      };
 
-  const mailOptions = {
-    from: process.env.ETH_USER,
-    to: emailx,
-    subject: "Email Verification",
-    text: `Please click on the following link to verify your email: ${verificationLink}`,
-    html: emailTemplate.replace('{{verificationLink}}', verificationLink),
-  };
-
-  // Send email
+      // Send email
   transporter.sendMail(mailOptions, (error, info) => {
     if (error) {
       console.log("Error sending email:", error);
@@ -34,6 +38,13 @@ function sendEmailForVerification(verificationLink, newUser) {
       console.log("Email sent:", info.response);
     }
   });
+
+    }
+  })
+
+  
+
+  
 }
 
 const register = async (req, res) => {
@@ -61,10 +72,10 @@ const register = async (req, res) => {
     const token = jwt.sign({ userId: newUser._id }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRES });
 
     // Construct verification link
-    const verificationLink = `${process.env.BASE_URL}/user/verify/${token}`;
+    const verificationLink = `${process.env.FRONT_END_BASE_URL}/verify/${token}`;
 
     // Send verification email
-    sendEmailForVerification(verificationLink, newUser);
+    sendEmailForVerification(verificationLink, newUser, res);
 
     res.status(201).json({ message: "An Email sent to your account please verify" });
   } catch (error) {
@@ -97,21 +108,18 @@ const verify = async (req, res) => {
     jwt.verify(token, process.env.JWT_SECRET, async (err, decoded) => {
       if (err) {
         console.error(err);
-        res.send("Email verification failed, possibly the link is invalid or expired"); 
-        // return res.status(500).json({ message: "Email verification failed, possibly the link is invalid or expired" });
+        return res.status(500).json({ message: "Email verification failed, possibly the link is invalid or expired" });
       }
       const userId = decoded.userId;
       try {
         const existingUser = await userModel.findById(userId);
         if (!existingUser) {
-            res.send("User not found"); 
-        //   return res.status(400).json({ message: "User not found" });
+          return res.status(400).json({ message: "User not found" });
         }
         // Update user verification status
         existingUser.isVerified = true;
         await existingUser.save();
-        res.send("Email Verified Successfully"); 
-        // res.status(200).json({ message: "Email Verified Successfully" });
+        res.status(200).json({ message: "Email Verified Successfully" });
       } catch (error) {
         console.error(error);
         res.status(500).json({ message: "An error occurred while verifying email" });
