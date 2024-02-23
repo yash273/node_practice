@@ -10,6 +10,12 @@ router.post("/register", userController.register);
 router.post("/login", userController.login);
 
 //verify email
-router.get("/verify/:token", userController.verify)
+router.get("/verify/:token", userController.verify);
+
+//forgot-password
+router.post('/forgot-password', userController.forgotPassword);
+
+//reset-password
+router.post('/reset-password/:token', userController.resetPassword);
 
 module.exports = router;
