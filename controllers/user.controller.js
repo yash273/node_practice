@@ -1,9 +1,9 @@
-const fs = require("fs");
 const userModel = require("../models/userModel");
 const bcrypt = require("bcrypt");
 const nodemailer = require("nodemailer");
 const ejs = require("ejs");
 const jwt = require("jsonwebtoken");
+const path = require('path');
 
 function sendEmailForVerification(verificationLink, newUser) {
   const transporter = nodemailer.createTransport({
@@ -14,7 +14,8 @@ function sendEmailForVerification(verificationLink, newUser) {
       pass: process.env.ETH_PASS,
     },
   });
-  ejs.renderFile("D:/Training/node learning/node_practice/views/email-varification.ejs", { verificationLink }, (err, data) => {
+  const filePath = path.join(__dirname, "../views/email-verification.ejs");
+  ejs.renderFile(filePath, { verificationLink }, (err, data) => {
     if (err) {
       console.log(err);
     } else {
@@ -50,8 +51,8 @@ function sendEmailForReset(resetLink, existingUser) {
       pass: process.env.ETH_PASS,
     },
   });
-
-  ejs.renderFile("D:/Training/node learning/node_practice/views/reset-password.ejs", { resetLink }, (err, data) => {
+  const filePath = path.join(__dirname, "../views/reset-password.ejs");
+  ejs.renderFile(filePath, { resetLink }, (err, data) => {
     if (err) {
       console.log(err);
     } else {
@@ -188,7 +189,10 @@ const forgotPassword = async (req, res) => {
       sendEmailForReset(resetLink, existingUser);
 
       res.status(201).json({ message: 'An e-mail has been sent with further instructions.' });
+    }else{
+      return res.status(500).json({ message: "Your Email Address is not Verified, try different Email." });
     }
+
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Error sending password reset email.' });
