@@ -18,4 +18,12 @@ router.post('/forgot-password', userController.forgotPassword);
 //reset-password
 router.post('/reset-password/:token', userController.resetPassword);
 
+//list-users
+router.get('/', userController.getUsers);
+
+//get-user by id
+router.get('/:id', userController.getUserFromId);
+
+router.put("/:id", userController.updateUser);
+
 module.exports = router;

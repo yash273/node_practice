@@ -24,6 +24,10 @@ const userSchema = new mongoose.Schema({
         type: Number,
         required: true
     },
+    stateId: Number,
+    countryId: Number,
+    // countryId: { type: Number, ref: 'Country' },
+    cityId: Number,
     isVerified: { 
         type: Boolean, 
         default: false 

@@ -1,6 +1,7 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const userRoutes = require('./routes/userRoutes');
+const locationRoutes = require('./routes/locationRouter');
 const { port, db } = require('./config');
 
 
@@ -16,6 +17,7 @@ app.set('view engine', 'ejs');
 app.use(express.json());
 app.use(allowCrossDomain)
 app.use('/user', userRoutes);
+app.use('/location', locationRoutes);
 
 mongoose
     .connect(db, {})

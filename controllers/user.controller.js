@@ -83,6 +83,57 @@ function sendEmailForReset(resetLink, existingUser) {
 
 }
 
+const getUsers = async (req, res) => {
+  try {
+    // Pagination
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    // Search
+    const searchQuery = req.query.q || "";
+    // Sort
+    const sortField = req.query.sortField || "firstname";
+    const sortOrder = req.query.sortOrder && req.query.sortOrder.toLowerCase() === "desc" ? -1 : 1;
+
+    const searchCondition = searchQuery ? {
+      $or: [
+        { firstname: { $regex: searchQuery, $options: "i" } },
+        { lastname: { $regex: searchQuery, $options: "i" } },
+        { email: { $regex: searchQuery, $options: "i" } }
+      ]
+    } : {};
+    
+
+    const result = await userModel
+      .find(searchCondition)
+      // .populate('countryId', 'name')
+      .sort({ [sortField]: sortOrder })
+      .skip((page - 1) * limit)
+      .limit(limit)
+      .exec();
+
+    // Use the searchCondition in countDocuments for an accurate total count
+    const totalCount = await userModel.countDocuments();
+
+    res.status(200).json({ users: result, totalCount });
+  } catch (error) {
+    res.status(500).json({
+      message: error.message,
+    });
+  }
+};
+
+const getUserFromId = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const user = await userModel.findById(id);
+    res.status(200).json(user);
+  } catch (error) {
+    res.status(500).json({
+      message: error.message,
+    });
+  }
+};
+
 const register = async (req, res) => {
   try {
     const { firstname, lastname, email, password, mobile } = req.body;
@@ -236,10 +287,31 @@ const resetPassword = async (req, res) => {
   }
 }
 
+const updateUser = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const user = await userModel.findByIdAndUpdate(id, req.body);
+    //if no such user in db
+    if (!user) {
+      res.status(404).json({
+        message: `cannot find any user with ID ${id}`,
+      });
+    }
+    res.status(200).json({ message: "User updated Successfully" });
+  } catch (error) {
+    res.status(500).json({
+      message: error.message,
+    });
+  }
+};
+
 module.exports = {
   register,
   login,
   verify,
   forgotPassword,
-  resetPassword
+  resetPassword,
+  getUsers,
+  getUserFromId,
+  updateUser
 };
