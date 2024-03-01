@@ -4,7 +4,9 @@ const nodemailer = require("nodemailer");
 const ejs = require("ejs");
 const jwt = require("jsonwebtoken");
 const path = require('path');
-
+const Country_new = require("../models/new model/country");
+const State_new = require("../models/new model/state");
+const City_new = require("../models/new model/city");
 function sendEmailForVerification(verificationLink, newUser) {
   const transporter = nodemailer.createTransport({
     host: "smtp.ethereal.email",
@@ -101,19 +103,99 @@ const getUsers = async (req, res) => {
         { email: { $regex: searchQuery, $options: "i" } }
       ]
     } : {};
+
+    const aggregateQuery = [
+      {
+        $lookup: {
+          from: "countries",
+          localField: "countryId",
+          foreignField: "id",
+          as: "countryDetails"
+        }
+      },
+      {
+        $lookup: {
+          from: "states",
+          localField: "stateId",
+          foreignField: "id",
+          as: "stateDetails"
+        }
+      },
+      {
+        $lookup: {
+          from: "cities",
+          localField: "cityId",
+          foreignField: "id",
+          as: "cityDetails"
+        }
+      },
+      {
+        $match: searchCondition
+      },
+      {
+        $sort: { [sortField]: sortOrder }
+      },
+      {
+        $skip: (page - 1) * limit
+      },
+      {
+        $limit: limit
+      },
+      {
+        $project: {
+          firstname: 1,
+          lastname: 1,
+          email: 1,
+          mobile: 1,
+          isVerified: 1,
+          country: { $arrayElemAt: ["$countryDetails.name", 0] }, // Taking first element of the array
+          state: { $arrayElemAt: ["$stateDetails.name", 0] },     
+          city: { $arrayElemAt: ["$cityDetails.name", 0] }        
+        }
+      }
+    ];
     
+    const result = await userModel.aggregate(aggregateQuery).exec();
+
+    const totalCount = await userModel.countDocuments();
+    res.status(200).json({ users: result, totalCount });
+  } catch (error) {
+    res.status(500).json({
+      message: error.message,
+    });
+  }
+};
+
+const getNewUsers = async (req, res) => {
+  try {
+    // Pagination
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    // Search
+    const searchQuery = req.query.q || "";
+    // Sort
+    const sortField = req.query.sortField || "firstname";
+    const sortOrder = req.query.sortOrder && req.query.sortOrder.toLowerCase() === "desc" ? -1 : 1;
+
+    const searchCondition = searchQuery ? {
+      $or: [
+        { firstname: { $regex: searchQuery, $options: "i" } },
+        { lastname: { $regex: searchQuery, $options: "i" } },
+        { email: { $regex: searchQuery, $options: "i" } }
+      ]
+    } : {};
 
     const result = await userModel
-      .find(searchCondition)
-      // .populate('countryId', 'name')
-      .sort({ [sortField]: sortOrder })
+    .find(searchCondition)
+    .populate('country')
+    .populate('state')
+    .populate('city')
+    .sort({ [sortField]: sortOrder })
       .skip((page - 1) * limit)
       .limit(limit)
       .exec();
 
-    // Use the searchCondition in countDocuments for an accurate total count
     const totalCount = await userModel.countDocuments();
-
     res.status(200).json({ users: result, totalCount });
   } catch (error) {
     res.status(500).json({
@@ -313,5 +395,6 @@ module.exports = {
   resetPassword,
   getUsers,
   getUserFromId,
-  updateUser
+  updateUser,
+  getNewUsers
 };
