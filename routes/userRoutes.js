@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const authenticateToken = require("../middlewares/authorize");
 
 const userController = require('../controllers/user.controller');
 
@@ -19,10 +20,10 @@ router.post('/forgot-password', userController.forgotPassword);
 router.post('/reset-password/:token', userController.resetPassword);
 
 //list-users
-router.get('/', userController.getUsers);
+router.get('/', authenticateToken , userController.getUsers);
 
 //get-user by id
-router.get('/:id', userController.getUserFromId);
+router.get('/:id',authenticateToken, userController.getUserFromId);
 
 router.put("/:id", userController.updateUser);
 

@@ -24,13 +24,8 @@ const userSchema = new mongoose.Schema({
         type: Number,
         required: true
     },
-    // stateId: Number,
-    // countryId: Number,
-    // cityId: Number,
 
-    country: { type: mongoose.Schema.Types.ObjectId, ref: 'Country_new' },
-    state: { type: mongoose.Schema.Types.ObjectId, ref: 'State_new' },
-    city: { type: mongoose.Schema.Types.ObjectId, ref: 'City_new' },
+    addresses: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Address' }],
 
     isVerified: { 
         type: Boolean, 

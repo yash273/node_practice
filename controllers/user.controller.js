@@ -3,7 +3,8 @@ const bcrypt = require("bcrypt");
 const nodemailer = require("nodemailer");
 const ejs = require("ejs");
 const jwt = require("jsonwebtoken");
-const path = require('path');
+const path = require("path");
+const addressModel = require("../models/address");
 const Country_new = require("../models/new model/country");
 const State_new = require("../models/new model/state");
 const City_new = require("../models/new model/city");
@@ -44,7 +45,6 @@ function sendEmailForVerification(verificationLink, newUser) {
 }
 
 function sendEmailForReset(resetLink, existingUser) {
-
   const transporter = nodemailer.createTransport({
     host: "smtp.ethereal.email",
     port: 587,
@@ -64,10 +64,11 @@ function sendEmailForReset(resetLink, existingUser) {
         from: process.env.ETH_USER,
         to: emailx,
         subject: "Reset Password",
-        text: `You are receiving this because you have requested the reset of the password for your account.\n\n` +
-        `Please click on the following link, or paste this into your browser to complete the process:\n\n` +
-        `${resetLink}\n\n` +
-        `If you did not request this, please ignore this email and your password will remain unchanged.\n`,
+        text:
+          `You are receiving this because you have requested the reset of the password for your account.\n\n` +
+          `Please click on the following link, or paste this into your browser to complete the process:\n\n` +
+          `${resetLink}\n\n` +
+          `If you did not request this, please ignore this email and your password will remain unchanged.\n`,
 
         html: data,
       };
@@ -82,7 +83,6 @@ function sendEmailForReset(resetLink, existingUser) {
       });
     }
   });
-
 }
 
 const getUsers = async (req, res) => {
@@ -96,13 +96,11 @@ const getUsers = async (req, res) => {
     const sortField = req.query.sortField || "firstname";
     const sortOrder = req.query.sortOrder && req.query.sortOrder.toLowerCase() === "desc" ? -1 : 1;
 
-    const searchCondition = searchQuery ? {
-      $or: [
-        { firstname: { $regex: searchQuery, $options: "i" } },
-        { lastname: { $regex: searchQuery, $options: "i" } },
-        { email: { $regex: searchQuery, $options: "i" } }
-      ]
-    } : {};
+    const searchCondition = searchQuery
+      ? {
+          $or: [{ firstname: { $regex: searchQuery, $options: "i" } }, { lastname: { $regex: searchQuery, $options: "i" } }, { email: { $regex: searchQuery, $options: "i" } }],
+        }
+      : {};
 
     const aggregateQuery = [
       {
@@ -110,36 +108,36 @@ const getUsers = async (req, res) => {
           from: "countries",
           localField: "countryId",
           foreignField: "id",
-          as: "countryDetails"
-        }
+          as: "countryDetails",
+        },
       },
       {
         $lookup: {
           from: "states",
           localField: "stateId",
           foreignField: "id",
-          as: "stateDetails"
-        }
+          as: "stateDetails",
+        },
       },
       {
         $lookup: {
           from: "cities",
           localField: "cityId",
           foreignField: "id",
-          as: "cityDetails"
-        }
+          as: "cityDetails",
+        },
       },
       {
-        $match: searchCondition
+        $match: searchCondition,
       },
       {
-        $sort: { [sortField]: sortOrder }
+        $sort: { [sortField]: sortOrder },
       },
       {
-        $skip: (page - 1) * limit
+        $skip: (page - 1) * limit,
       },
       {
-        $limit: limit
+        $limit: limit,
       },
       {
         $project: {
@@ -149,12 +147,12 @@ const getUsers = async (req, res) => {
           mobile: 1,
           isVerified: 1,
           country: { $arrayElemAt: ["$countryDetails.name", 0] }, // Taking first element of the array
-          state: { $arrayElemAt: ["$stateDetails.name", 0] },     
-          city: { $arrayElemAt: ["$cityDetails.name", 0] }        
-        }
-      }
+          state: { $arrayElemAt: ["$stateDetails.name", 0] },
+          city: { $arrayElemAt: ["$cityDetails.name", 0] },
+        },
+      },
     ];
-    
+
     const result = await userModel.aggregate(aggregateQuery).exec();
 
     const totalCount = await userModel.countDocuments();
@@ -177,20 +175,27 @@ const getNewUsers = async (req, res) => {
     const sortField = req.query.sortField || "firstname";
     const sortOrder = req.query.sortOrder && req.query.sortOrder.toLowerCase() === "desc" ? -1 : 1;
 
-    const searchCondition = searchQuery ? {
-      $or: [
-        { firstname: { $regex: searchQuery, $options: "i" } },
-        { lastname: { $regex: searchQuery, $options: "i" } },
-        { email: { $regex: searchQuery, $options: "i" } }
-      ]
-    } : {};
+    const searchCondition = searchQuery
+      ? {
+          $or: [{ firstname: { $regex: searchQuery, $options: "i" } }, { lastname: { $regex: searchQuery, $options: "i" } }, { email: { $regex: searchQuery, $options: "i" } }],
+        }
+      : {};
 
     const result = await userModel
-    .find(searchCondition)
-    .populate('country')
-    .populate('state')
-    .populate('city')
-    .sort({ [sortField]: sortOrder })
+      .find(searchCondition)
+      .populate({
+        path: "addresses",
+        populate: { path: "country" }, // Populate the 'country' field within the 'addresses' field
+      })
+      .populate({
+        path: "addresses",
+        populate: { path: "state" }, // Populate the 'state' field within the 'addresses' field
+      })
+      .populate({
+        path: "addresses",
+        populate: { path: "city" }, // Populate the 'city' field within the 'addresses' field
+      })
+      .sort({ [sortField]: sortOrder })
       .skip((page - 1) * limit)
       .limit(limit)
       .exec();
@@ -314,28 +319,25 @@ const forgotPassword = async (req, res) => {
     const isVerified = existingUser.isVerified;
 
     if (isVerified == true) {
-      const token = jwt.sign({ userId: existingUser._id }, process.env.JWT_SECRET, { expiresIn:  '3600s'});
+      const token = jwt.sign({ userId: existingUser._id }, process.env.JWT_SECRET, { expiresIn: "3600s" });
 
       // Construct reset link
       const resetLink = `${process.env.FRONT_END_BASE_URL}/reset-password/${token}`;
 
       sendEmailForReset(resetLink, existingUser);
 
-      res.status(201).json({ message: 'An e-mail has been sent with further instructions.' });
-    }else{
+      res.status(201).json({ message: "An e-mail has been sent with further instructions." });
+    } else {
       return res.status(500).json({ message: "Your Email Address is not Verified, try different Email." });
     }
-
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: 'Error sending password reset email.' });
+    res.status(500).json({ message: "Error sending password reset email." });
   }
 };
 
 const resetPassword = async (req, res) => {
-
   try {
-
     const { token } = req.params;
     const { password } = req.body;
 
@@ -362,23 +364,35 @@ const resetPassword = async (req, res) => {
         res.status(500).json({ message: "Error in changing password." });
       }
     });
-
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: 'Error in changing password.' });
+    res.status(500).json({ message: "Error in changing password." });
   }
-}
+};
 
 const updateUser = async (req, res) => {
   try {
     const { id } = req.params;
-    const user = await userModel.findByIdAndUpdate(id, req.body);
+    console.log("req.body", req.body);
+    const { country, state, city } = req.body;
+    const newAdd = await addressModel.create({
+      user: id,
+      country,
+      state,
+      city,
+    });
+
+    console.log("newAdd", newAdd);
+
+    const add = [newAdd._id];
+
+    const user = await userModel.findByIdAndUpdate(id, { addresses: add });
     //if no such user in db
-    if (!user) {
-      res.status(404).json({
-        message: `cannot find any user with ID ${id}`,
-      });
-    }
+    // if (!user) {
+    //   res.status(404).json({
+    //     message: `cannot find any user with ID ${id}`,
+    //   });
+    // }
     res.status(200).json({ message: "User updated Successfully" });
   } catch (error) {
     res.status(500).json({
@@ -396,5 +410,5 @@ module.exports = {
   getUsers,
   getUserFromId,
   updateUser,
-  getNewUsers
+  getNewUsers,
 };
