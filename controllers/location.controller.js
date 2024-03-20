@@ -1,7 +1,7 @@
 const countryModel = require("../models/countryModel");
 const stateModel = require("../models/stateModel");
 const cityModel = require("../models/cityModel");
-
+const addressModel = require("../models/address");
 const Country_new = require("../models/new model/country");
 const State_new = require("../models/new model/state");
 const City_new = require("../models/new model/city");
@@ -69,8 +69,29 @@ const getNewCountries = async (req, res) => {
 const getNewStates = async (req, res) => {
   const { countryId } = req.params;
   try {
-    const result = await State_new.find({ country: countryId });
-    res.status(200).json({ states: result });
+
+    const pipeline = [
+      {
+        $group: {
+          _id: "$state",
+          users: { $sum: 1 },
+        },
+      },
+    ];
+    
+    const responseData = await addressModel.aggregate(pipeline);
+        
+    const statesWithUsers = responseData.map(stateData => stateData._id.toString());
+    const allStates = await State_new.find({ country: countryId });
+        
+    const finalData = allStates.map(state => {
+      const stateId = state._id.toString();
+      const name = state.name;
+      const usersCount = statesWithUsers.includes(stateId) ? responseData.find(s => s._id.toString() === stateId).users : 0;
+      return { name , usersCount };
+    });    
+
+    res.status(200).json({ states: finalData });
   } catch (error) {
     res.status(500).json({
       message: error.message,

@@ -181,24 +181,20 @@ const getNewUsers = async (req, res) => {
         }
       : {};
 
-    const result = await userModel
+      const result = await userModel
       .find(searchCondition)
-      .populate({
-        path: "addresses",
-        populate: { path: "country" }, // Populate the 'country' field within the 'addresses' field
-      })
-      .populate({
-        path: "addresses",
-        populate: { path: "state" }, // Populate the 'state' field within the 'addresses' field
-      })
-      .populate({
-        path: "addresses",
-        populate: { path: "city" }, // Populate the 'city' field within the 'addresses' field
-      })
+      // .populate({
+      //   path: "addresses",
+      //   populate: [
+      //     { path: "country", select: 'name -_id' },
+      //     { path: "state", select: 'name -_id' },
+      //     { path: "city", select: 'name -_id' },
+      //   ],
+      // })
       .sort({ [sortField]: sortOrder })
       .skip((page - 1) * limit)
-      .limit(limit)
-      .exec();
+      .limit(limit);
+  
 
     const totalCount = await userModel.countDocuments();
     res.status(200).json({ users: result, totalCount });
@@ -373,32 +369,41 @@ const resetPassword = async (req, res) => {
 const updateUser = async (req, res) => {
   try {
     const { id } = req.params;
-    console.log("req.body", req.body);
     const { country, state, city } = req.body;
-    const newAdd = await addressModel.create({
+  await addressModel.create({
       user: id,
       country,
       state,
       city,
     });
-
-    console.log("newAdd", newAdd);
-
-    const add = [newAdd._id];
-
-    const user = await userModel.findByIdAndUpdate(id, { addresses: add });
-    //if no such user in db
-    // if (!user) {
-    //   res.status(404).json({
-    //     message: `cannot find any user with ID ${id}`,
-    //   });
-    // }
     res.status(200).json({ message: "User updated Successfully" });
   } catch (error) {
     res.status(500).json({
       message: error.message,
     });
   }
+};
+
+const getAddresses = async (req, res) => {
+try {
+  const { id } = req.params;
+  const addresses = await addressModel
+  .find({ user: id }, { user: 0 })
+  .populate(
+    [
+      { path: "country", select: 'name -_id' },
+      { path: "state", select: 'name -_id' },
+      { path: "city", select: 'name -_id' },
+    ]
+  )
+  ;
+
+  res.status(200).json({ addresses: addresses });
+} catch (error) {
+  res.status(500).json({
+    message: error.message,
+  });
+}
 };
 
 module.exports = {
@@ -411,4 +416,5 @@ module.exports = {
   getUserFromId,
   updateUser,
   getNewUsers,
+  getAddresses
 };

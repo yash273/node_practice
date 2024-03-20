@@ -24,9 +24,6 @@ const userSchema = new mongoose.Schema({
         type: Number,
         required: true
     },
-
-    addresses: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Address' }],
-
     isVerified: { 
         type: Boolean, 
         default: false 

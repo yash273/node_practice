@@ -27,6 +27,6 @@ router.get('/:id',authenticateToken, userController.getUserFromId);
 
 router.put("/:id", userController.updateUser);
 
-// router.get('/', userController.getNewUsers);
+router.get('/address/:id',authenticateToken, userController.getAddresses);
 
 module.exports = router;
