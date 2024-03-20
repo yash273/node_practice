@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const authenticateToken = require("../middlewares/authorize");
 
 const locationController = require('../controllers/location.controller');
 
@@ -15,6 +16,8 @@ router.get('/cities/countries/:countryId', locationController.getCitiesByCountry
 router.get('/new/countires', locationController.getNewCountries);
 
 router.get('/new/states/:countryId', locationController.getNewStates);
+
+router.get('/new/user_per_states/:countryId', authenticateToken, locationController.getUserPerState);
 
 router.get('/new/cities/:stateId', locationController.getNewCitiesByStateId);
 

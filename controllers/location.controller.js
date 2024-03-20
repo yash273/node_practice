@@ -66,7 +66,7 @@ const getNewCountries = async (req, res) => {
   }
 };
 
-const getNewStates = async (req, res) => {
+const getUserPerState = async (req,res) => {
   const { countryId } = req.params;
   try {
 
@@ -74,24 +74,40 @@ const getNewStates = async (req, res) => {
       {
         $group: {
           _id: "$state",
-          users: { $sum: 1 },
+          users: { $sum: 1 }
         },
-      },
+      }
     ];
     
     const responseData = await addressModel.aggregate(pipeline);
-        
     const statesWithUsers = responseData.map(stateData => stateData._id.toString());
     const allStates = await State_new.find({ country: countryId });
         
     const finalData = allStates.map(state => {
       const stateId = state._id.toString();
       const name = state.name;
-      const usersCount = statesWithUsers.includes(stateId) ? responseData.find(s => s._id.toString() === stateId).users : 0;
+      let usersCount = 0;
+      if (statesWithUsers.includes(stateId)) {
+        const stateData = responseData.find(s => s._id.toString() === stateId);
+        usersCount = stateData ? stateData.users : 0;
+      }
       return { name , usersCount };
     });    
 
     res.status(200).json({ states: finalData });
+  } catch (error) {
+    res.status(500).json({
+      message: error.message,
+    });
+  }
+}
+
+const getNewStates = async (req, res) => {
+  const { countryId } = req.params;
+  try {
+    const result = await State_new.find({ country: countryId })
+
+    res.status(200).json({ states: result });
   } catch (error) {
     res.status(500).json({
       message: error.message,
@@ -119,4 +135,5 @@ module.exports = {
   getNewCountries,
   getNewStates,
   getNewCitiesByStateId,
+  getUserPerState
 };

@@ -219,7 +219,7 @@ const getUserFromId = async (req, res) => {
 
 const register = async (req, res) => {
   try {
-    const { firstname, lastname, email, password, mobile } = req.body;
+    const { firstname, lastname, email, password, mobile, country, state, city } = req.body;
 
     // Check if user already exists
     const existingUser = await userModel.findOne({ email });
@@ -237,6 +237,13 @@ const register = async (req, res) => {
       email,
       password: encryptedPassword,
       mobile,
+    });
+
+    await addressModel.create({
+      user: newUser._id,
+      country,
+      state,
+      city,
     });
 
     const token = jwt.sign({ userId: newUser._id }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRES });
@@ -391,9 +398,9 @@ try {
   .find({ user: id }, { user: 0 })
   .populate(
     [
-      { path: "country", select: 'name -_id' },
-      { path: "state", select: 'name -_id' },
-      { path: "city", select: 'name -_id' },
+      { path: "country", select: 'name' },
+      { path: "state", select: 'name' },
+      { path: "city", select: 'name' },
     ]
   )
   ;
