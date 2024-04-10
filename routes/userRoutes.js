@@ -27,6 +27,10 @@ router.get('/:id',authenticateToken, userController.getUserFromId);
 
 router.put("/:id", userController.updateUser);
 
+router.delete("/:id", userController.deleteUser)
+
+// router.put('/name/:id', userController.updateNameMobile);
+
 router.get('/address/:id',authenticateToken, userController.getAddresses);
 
 module.exports = router;

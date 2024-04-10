@@ -181,7 +181,7 @@ const getNewUsers = async (req, res) => {
         }
       : {};
 
-      const result = await userModel
+    const result = await userModel
       .find(searchCondition)
       // .populate({
       //   path: "addresses",
@@ -193,10 +193,10 @@ const getNewUsers = async (req, res) => {
       // })
       .sort({ [sortField]: sortOrder })
       .skip((page - 1) * limit)
-      .limit(limit);
-  
+      .limit(limit)
+      .notDeleted();
 
-    const totalCount = await userModel.countDocuments();
+    const totalCount = await userModel.countDocuments().notDeleted();
     res.status(200).json({ users: result, totalCount });
   } catch (error) {
     res.status(500).json({
@@ -208,7 +208,7 @@ const getNewUsers = async (req, res) => {
 const getUserFromId = async (req, res) => {
   try {
     const { id } = req.params;
-    const user = await userModel.findById(id);
+    const user = await userModel.findById(id).notDeleted();
     res.status(200).json(user);
   } catch (error) {
     res.status(500).json({
@@ -373,11 +373,33 @@ const resetPassword = async (req, res) => {
   }
 };
 
+// const updateNameMobile = async (req, res) => {
+// try {
+//   const { id } = req.params;
+//   const { firstname, lastname, mobile } = req.body;
+
+//   const existingUser = await  userModel.findByIdAndUpdate(id, firstname, lastname, mobile);
+
+//   if (!existingUser) {
+//     res.status(404).json({
+//       message: `cannot find any user with ID ${id}`,
+//     });
+//   }
+
+//   res.status(200).json({ message: "User updated Successfully" });
+
+// } catch (error) {
+//   res.status(500).json({
+//     message: error.message,
+//   });
+// }
+// };
+
 const updateUser = async (req, res) => {
   try {
     const { id } = req.params;
     const { country, state, city } = req.body;
-  await addressModel.create({
+    await addressModel.create({
       user: id,
       country,
       state,
@@ -392,25 +414,38 @@ const updateUser = async (req, res) => {
 };
 
 const getAddresses = async (req, res) => {
-try {
-  const { id } = req.params;
-  const addresses = await addressModel
-  .find({ user: id }, { user: 0 })
-  .populate(
-    [
-      { path: "country", select: 'name' },
-      { path: "state", select: 'name' },
-      { path: "city", select: 'name' },
-    ]
-  )
-  ;
+  try {
+    const { id } = req.params;
+    const addresses = await addressModel.find({ user: id }, { user: 0 }).populate([
+      { path: "country", select: "name" },
+      { path: "state", select: "name" },
+      { path: "city", select: "name" },
+    ]);
+    res.status(200).json({ addresses: addresses });
+  } catch (error) {
+    res.status(500).json({
+      message: error.message,
+    });
+  }
+};
 
-  res.status(200).json({ addresses: addresses });
-} catch (error) {
-  res.status(500).json({
-    message: error.message,
-  });
-}
+const deleteUser = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const user = await userModel.findById(id);
+    if (user) {
+      await user.softDelete();
+      res.status(200).json({ message: "user deleted" });
+    } else {
+      res.status(404).json({
+        message: `cannot find any user with ID ${id}`,
+      });
+    }
+  } catch (error) {
+    res.status(500).json({
+      message: error.message,
+    });
+  }
 };
 
 module.exports = {
@@ -423,5 +458,7 @@ module.exports = {
   getUserFromId,
   updateUser,
   getNewUsers,
-  getAddresses
+  getAddresses,
+  deleteUser,
+  // updateNameMobile
 };

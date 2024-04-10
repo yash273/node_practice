@@ -27,8 +27,27 @@ const userSchema = new mongoose.Schema({
     isVerified: { 
         type: Boolean, 
         default: false 
+    },
+    isDeleted: {
+        type: Boolean,
+        default: false,
+    },
+    deletedAt: {
+        type: Date,
+        default: null,
     }
 });
+
+userSchema.query.notDeleted = function() {
+    return this.where({ isDeleted: false });
+};
+
+userSchema.methods.softDelete = async function() {
+    this.isDeleted = true;
+    this.deletedAt = new Date();
+    await this.save();
+};
+
 
 const User = mongoose.model('user', userSchema);
 
