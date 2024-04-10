@@ -33,4 +33,9 @@ router.delete("/:id", userController.deleteUser)
 
 router.get('/address/:id',authenticateToken, userController.getAddresses);
 
+router.post('/seq/create-user', userController.createUserSeq);
+
+router.get('/seq/users', userController.getUsersSeq);
+
+
 module.exports = router;

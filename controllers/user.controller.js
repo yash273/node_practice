@@ -5,9 +5,8 @@ const ejs = require("ejs");
 const jwt = require("jsonwebtoken");
 const path = require("path");
 const addressModel = require("../models/address");
-const Country_new = require("../models/new model/country");
-const State_new = require("../models/new model/state");
-const City_new = require("../models/new model/city");
+
+const User = require('../models/sequelize model/user')
 function sendEmailForVerification(verificationLink, newUser) {
   const transporter = nodemailer.createTransport({
     host: "smtp.ethereal.email",
@@ -448,6 +447,57 @@ const deleteUser = async (req, res) => {
   }
 };
 
+//sequelize orm
+
+const createUserSeq = async (req, res) => {
+  try {
+    const { firstName, lastName, email, password, mobile, country, state, city } = req.body;
+
+
+    const existingUser = await User.findOne({
+      where :{ 
+        email: email 
+      }
+    });
+    if (existingUser) {
+      return res.status(400).json({ message: "User with this email already exists" });
+    }
+
+    const encryptedPassword = await bcrypt.hash(password, 10);
+
+    const newUser = await User.create({
+      firstName,
+      lastName,
+      email,
+      password: encryptedPassword,
+      mobile,
+    });
+
+    res.status(201).json(newUser);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+}
+
+const getUsersSeq = async (req, res) => {
+  try {
+    const users = await User.findAll();
+    res.status(200).json(users);
+  } catch (error) {
+    console.error('Error fetching users:', error);
+    res.status(500).json({ error: 'Failed to fetch users' });
+  }
+}
+
+const deleteUserSeq = async(req, res) => {
+try {
+  
+} catch (error) {
+  
+}
+}
+
+
 module.exports = {
   register,
   login,
@@ -460,5 +510,7 @@ module.exports = {
   getNewUsers,
   getAddresses,
   deleteUser,
+  createUserSeq,
+  getUsersSeq
   // updateNameMobile
 };
