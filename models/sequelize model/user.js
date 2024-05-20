@@ -19,7 +19,7 @@ const User = sequelize.define('User', {
       type: DataTypes.STRING,
       allowNull: false,
       validate: {
-        len: [6, 255], // Minimum length of 6 characters and maximum of 255 characters
+        len: [8, 255], 
       },
     },
     mobile: {
@@ -30,14 +30,14 @@ const User = sequelize.define('User', {
       type: DataTypes.BOOLEAN,
       defaultValue: false,
     },
-    isDeleted: {
-      type: DataTypes.BOOLEAN,
-      defaultValue: false,
-    },
     deletedAt: {
       type: DataTypes.DATE,
       defaultValue: null,
     },
-  });
+  },
+  {
+    paranoid: true
+  }
+);
 
   module.exports = User;

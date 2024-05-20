@@ -21,4 +21,13 @@ router.get('/new/user_per_states/:countryId', authenticateToken, locationControl
 
 router.get('/new/cities/:stateId', locationController.getNewCitiesByStateId);
 
+//seq
+router.get('/seq/countires',locationController.getCountriesSeq);
+
+router.get('/seq/states/:countryId', locationController.getStatesSeq);
+
+router.get('/seq/cities/:stateId', locationController.getCitesSeq);
+
+router.post('/seq/create-address', locationController.createAddressSeq)
+
 module.exports = router;

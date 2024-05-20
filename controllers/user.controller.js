@@ -5,8 +5,10 @@ const ejs = require("ejs");
 const jwt = require("jsonwebtoken");
 const path = require("path");
 const addressModel = require("../models/address");
+const { Op } = require("sequelize");
+const User = require("../models/sequelize model/user");
+const { Country, State, City, Address } = require("../models/sequelize model/address");
 
-const User = require('../models/sequelize model/user')
 function sendEmailForVerification(verificationLink, newUser) {
   const transporter = nodemailer.createTransport({
     host: "smtp.ethereal.email",
@@ -182,14 +184,6 @@ const getNewUsers = async (req, res) => {
 
     const result = await userModel
       .find(searchCondition)
-      // .populate({
-      //   path: "addresses",
-      //   populate: [
-      //     { path: "country", select: 'name -_id' },
-      //     { path: "state", select: 'name -_id' },
-      //     { path: "city", select: 'name -_id' },
-      //   ],
-      // })
       .sort({ [sortField]: sortOrder })
       .skip((page - 1) * limit)
       .limit(limit)
@@ -453,11 +447,10 @@ const createUserSeq = async (req, res) => {
   try {
     const { firstName, lastName, email, password, mobile, country, state, city } = req.body;
 
-
     const existingUser = await User.findOne({
-      where :{ 
-        email: email 
-      }
+      where: {
+        email: email,
+      },
     });
     if (existingUser) {
       return res.status(400).json({ message: "User with this email already exists" });
@@ -477,26 +470,126 @@ const createUserSeq = async (req, res) => {
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
-}
+};
 
 const getUsersSeq = async (req, res) => {
   try {
-    const users = await User.findAll();
-    res.status(200).json(users);
+    // Pagination
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    // Search
+    const searchQuery = req.query.q || "";
+    // Sort
+    const sortField = req.query.sortField || "firstName";
+    const sortOrder = req.query.sortOrder.toUpperCase();
+
+    const users = await User.findAndCountAll({
+      where: {
+        [Op.or]: [{ firstName: { [Op.like]: `%${searchQuery}%` } }],
+      },
+      offset: (page - 1) * limit,
+      limit: limit,
+      order: [[sortField, sortOrder]],
+    });
+
+    res.status(200).json({ users: users.rows, totalCount: users.count });
   } catch (error) {
-    console.error('Error fetching users:', error);
-    res.status(500).json({ error: 'Failed to fetch users' });
+    console.error("Error fetching users:", error);
+    res.status(500).json({ error: "Failed to fetch users" });
   }
-}
+};
 
-const deleteUserSeq = async(req, res) => {
-try {
-  
-} catch (error) {
-  
-}
-}
+const deleteUserSeq = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const existingUser = await User.findByPk(id);
 
+    if (existingUser) {
+      await User.destroy({
+        where: {
+          id: id,
+        },
+      });
+      res.status(200).json({ message: "user deleted" });
+    } else {
+      res.status(404).json({
+        message: `cannot find any user with ID ${id}`,
+      });
+    }
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+const getUserSeqById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const existingUser = await User.findByPk(id);
+
+    if (existingUser) {
+      return res.status(200).json(existingUser);
+    } else {
+      res.status(404).json({
+        message: `cannot find any user with ID ${id}`,
+      });
+    }
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+const updateUserSeq = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { firstName, lastName, mobile } = req.body;
+    const existingUser = await User.findByPk(id);
+
+    if (existingUser) {
+      await existingUser.update({
+        firstName: firstName,
+        lastName: lastName,
+        mobile: mobile,
+      });
+      return res.status(200).json(existingUser);
+    } else {
+      res.status(404).json({
+        message: `cannot find any user with ID ${id}`,
+      });
+    }
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+const restoreUserSeq = async (req, res) => {
+  try {
+    await User.restore();
+    res.status(200).json({ message: "restore sucessfull!" });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+const getAddressesSeq = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const addresses = await Address.findAll({
+      where: {
+        uid: id,
+      },
+      include: [
+        { model: City, as: "city" },
+        { model: State, as: "state" },
+        { model: Country, as: "country" },
+      ],
+    });
+    res.status(200).json({ addresses: addresses });
+  } catch (error) {
+    res.status(500).json({
+      message: error.message,
+    });
+  }
+};
 
 module.exports = {
   register,
@@ -511,6 +604,11 @@ module.exports = {
   getAddresses,
   deleteUser,
   createUserSeq,
-  getUsersSeq
+  getUsersSeq,
+  deleteUserSeq,
+  getUserSeqById,
+  updateUserSeq,
+  restoreUserSeq,
+  getAddressesSeq
   // updateNameMobile
 };

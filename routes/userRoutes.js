@@ -37,5 +37,14 @@ router.post('/seq/create-user', userController.createUserSeq);
 
 router.get('/seq/users', userController.getUsersSeq);
 
+router.get('/seq/:id', userController.getUserSeqById);
+
+router.delete('/seq/:id', userController.deleteUserSeq);
+
+router.put('/seq/:id', userController.updateUserSeq);
+
+router.post('/seq/restore', userController.restoreUserSeq);
+
+router.get('/seq/address/:id', userController.getAddressesSeq);
 
 module.exports = router;
